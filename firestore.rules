@@ -1,0 +1,161 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- HELPER FUNCTIONS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Master Gate: Verifies that the authenticated user is a verified member of this shop
+    function isShopMember(shopId) {
+      return isSignedIn() &&
+        isValidId(shopId) &&
+        exists(/databases/$(database)/documents/shops/$(shopId)/members/$(request.auth.uid));
+    }
+
+    function getMemberRole(shopId) {
+      return get(/databases/$(database)/documents/shops/$(shopId)/members/$(request.auth.uid)).data.role;
+    }
+
+    function isShopOwner(shopId) {
+      return isShopMember(shopId) && getMemberRole(shopId) == 'owner';
+    }
+
+    function isShopManager(shopId) {
+      return isShopMember(shopId) && (getMemberRole(shopId) == 'owner' || getMemberRole(shopId) == 'manager');
+    }
+
+    function canWriteStock(shopId) {
+      return isShopMember(shopId) && (getMemberRole(shopId) == 'owner' || getMemberRole(shopId) == 'manager' || getMemberRole(shopId) == 'staff');
+    }
+
+    // --- USERS ROOT COLLECTION ---
+    match /users/{userId} {
+      allow get, update: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list, delete: if false;
+    }
+
+    // --- SHOPS ROOT COLLECTION ---
+    match /shops/{shopId} {
+      allow get: if isShopMember(shopId);
+      // Only initial shop creation where caller registers themselves as owner
+      allow create: if isSignedIn() && isValidId(shopId) && incoming().ownerId == request.auth.uid;
+      allow update: if isShopOwner(shopId) && incoming().ownerId == existing().ownerId;
+      allow delete: if isShopOwner(shopId);
+
+      // --- SUBCOLLECTION: MEMBERS ---
+      match /members/{memberUid} {
+        allow read: if isShopMember(shopId);
+        // Initial owner membership setup or owner inviting team member
+        allow create: if isSignedIn() && (
+          (!exists(/databases/$(database)/documents/shops/$(shopId)/members/$(request.auth.uid)) && incoming().role == 'owner') ||
+          isShopOwner(shopId)
+        );
+        allow update, delete: if isShopOwner(shopId);
+      }
+
+      // --- SUBCOLLECTION: PRODUCTS ---
+      match /products/{productId} {
+        allow read: if isShopMember(shopId);
+        allow create: if canWriteStock(shopId) &&
+          incoming().name is string && incoming().name.size() > 0 && incoming().name.size() <= 200 &&
+          incoming().quantity is number &&
+          incoming().sellingPricePaise is number && incoming().sellingPricePaise >= 0;
+        allow update: if canWriteStock(shopId) &&
+          incoming().name is string && incoming().name.size() > 0 &&
+          incoming().quantity is number &&
+          incoming().sellingPricePaise is number && incoming().sellingPricePaise >= 0;
+        // Staff cannot delete products permanently; only Manager/Owner
+        allow delete: if isShopManager(shopId);
+      }
+
+      // --- SUBCOLLECTION: STOCK MOVEMENTS (IMMUTABLE LOG) ---
+      match /stockMovements/{movementId} {
+        allow read: if isShopMember(shopId);
+        allow create: if canWriteStock(shopId) &&
+          incoming().productId is string &&
+          incoming().deltaQuantity is number &&
+          incoming().previousQuantity is number &&
+          incoming().newQuantity is number &&
+          incoming().reason is string;
+        // Stock history records are strictly append-only (immutable)
+        allow update, delete: if false;
+      }
+
+      // --- SUBCOLLECTION: SALES & INVOICES ---
+      match /sales/{saleId} {
+        allow read: if isShopMember(shopId);
+        allow create: if canWriteStock(shopId) &&
+          incoming().invoiceNumber is string &&
+          incoming().totalPaise is number && incoming().totalPaise >= 0;
+        // Sales cannot be altered after creation, only status changes (e.g. returns) by Manager/Owner
+        allow update: if isShopManager(shopId);
+        allow delete: if isShopOwner(shopId);
+      }
+
+      // --- SUBCOLLECTION: CUSTOMERS & KHATA ---
+      match /customers/{customerId} {
+        allow read: if isShopMember(shopId);
+        allow create, update: if canWriteStock(shopId) &&
+          incoming().name is string && incoming().name.size() > 0 &&
+          incoming().phone is string;
+        allow delete: if isShopManager(shopId);
+      }
+
+      // --- SUBCOLLECTION: PAYMENTS ---
+      match /payments/{paymentId} {
+        allow read: if isShopMember(shopId);
+        allow create: if canWriteStock(shopId) &&
+          incoming().amountPaise is number && incoming().amountPaise > 0;
+        allow update, delete: if isShopManager(shopId);
+      }
+
+      // --- SUBCOLLECTION: SUPPLIERS ---
+      match /suppliers/{supplierId} {
+        allow read: if isShopMember(shopId);
+        allow create, update: if isShopManager(shopId);
+        allow delete: if isShopOwner(shopId);
+      }
+
+      // --- SUBCOLLECTION: PURCHASE ORDERS ---
+      match /purchaseOrders/{poId} {
+        allow read: if isShopMember(shopId);
+        allow create, update: if isShopManager(shopId);
+        allow delete: if isShopOwner(shopId);
+      }
+
+      // --- SUBCOLLECTION: TRASH (RECYCLE BIN) ---
+      match /trash/{trashId} {
+        allow read: if isShopMember(shopId);
+        allow create: if canWriteStock(shopId);
+        allow delete: if isShopOwner(shopId);
+      }
+
+      // --- SUBCOLLECTION: AUDIT LOGS ---
+      match /auditLogs/{logId} {
+        allow read: if isShopOwner(shopId);
+        allow create: if isShopMember(shopId);
+        allow update, delete: if false;
+      }
+    }
+  }
+}

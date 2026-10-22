@@ -1,0 +1,202 @@
+{
+  "entities": {
+    "Shop": {
+      "title": "Shop",
+      "description": "Shop organization and operational settings",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "ownerName": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "address": { "type": "string", "maxLength": 250 },
+        "shopType": { "type": "string", "maxLength": 50 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "currencyCode": { "type": "string", "maxLength": 10 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "ownerName", "phone", "ownerId", "shopType"]
+    },
+    "Member": {
+      "title": "Member",
+      "description": "Team member role and status within a shop",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "enum": ["owner", "manager", "staff", "viewer"] },
+        "joinedAt": { "type": "string" }
+      },
+      "required": ["uid", "role"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Inventory product item in a shop catalog",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 200 },
+        "quantity": { "type": "number" },
+        "sellingPricePaise": { "type": "number" },
+        "unit": { "type": "string", "maxLength": 30 },
+        "category": { "type": "string", "maxLength": 100 },
+        "brand": { "type": "string", "maxLength": 100 },
+        "shelfLocation": { "type": "string", "maxLength": 100 },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "quantity", "sellingPricePaise", "unit"]
+    },
+    "StockMovement": {
+      "title": "StockMovement",
+      "description": "Immutable ledger record of quantity changes and reasons",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string", "maxLength": 128 },
+        "deltaQuantity": { "type": "number" },
+        "previousQuantity": { "type": "number" },
+        "newQuantity": { "type": "number" },
+        "reason": { "type": "string", "maxLength": 50 },
+        "performedBy": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["productId", "deltaQuantity", "previousQuantity", "newQuantity", "reason", "performedBy"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "Completed customer sale invoice",
+      "type": "object",
+      "properties": {
+        "invoiceNumber": { "type": "string", "maxLength": 50 },
+        "totalPaise": { "type": "number" },
+        "paymentMethod": { "type": "string", "maxLength": 20 },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["invoiceNumber", "totalPaise", "paymentMethod", "createdBy"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer ledger profile and current credit balance",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "currentBalancePaise": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "phone", "currentBalancePaise"]
+    },
+    "CustomerPayment": {
+      "title": "CustomerPayment",
+      "description": "Record of payment received from customer towards credit balance",
+      "type": "object",
+      "properties": {
+        "customerId": { "type": "string", "maxLength": 128 },
+        "amountPaise": { "type": "number" },
+        "paymentMode": { "type": "string", "maxLength": 30 },
+        "note": { "type": "string", "maxLength": 200 },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["customerId", "amountPaise", "paymentMode", "createdBy"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Vendor and wholesale supply contact",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "company": { "type": "string", "maxLength": 150 },
+        "address": { "type": "string", "maxLength": 250 },
+        "balancePaise": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "phone"]
+    },
+    "PurchaseOrder": {
+      "title": "PurchaseOrder",
+      "description": "Purchase order from wholesale vendor",
+      "type": "object",
+      "properties": {
+        "poNumber": { "type": "string", "maxLength": 50 },
+        "supplierId": { "type": "string", "maxLength": 128 },
+        "totalAmountPaise": { "type": "number" },
+        "status": { "type": "string", "maxLength": 30 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["poNumber", "supplierId", "totalAmountPaise", "status"]
+    },
+    "TrashItem": {
+      "title": "TrashItem",
+      "description": "Soft-deleted records pending 30-day purge or recovery",
+      "type": "object",
+      "properties": {
+        "originalCollection": { "type": "string", "maxLength": 50 },
+        "originalId": { "type": "string", "maxLength": 128 },
+        "deletedAt": { "type": "string" },
+        "deletedBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["originalCollection", "originalId", "deletedAt", "deletedBy"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable security and audit track",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "maxLength": 100 },
+        "details": { "type": "string", "maxLength": 500 },
+        "performedBy": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["action", "performedBy", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/shops/{shopId}": {
+      "schema": "Shop",
+      "description": "Root shop entity"
+    },
+    "/shops/{shopId}/members/{uid}": {
+      "schema": "Member",
+      "description": "Shop team membership and role mapping"
+    },
+    "/shops/{shopId}/products/{productId}": {
+      "schema": "Product",
+      "description": "Shop inventory items"
+    },
+    "/shops/{shopId}/stockMovements/{movementId}": {
+      "schema": "StockMovement",
+      "description": "Stock audit history"
+    },
+    "/shops/{shopId}/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "Customer sales and invoices"
+    },
+    "/shops/{shopId}/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Customer credit khata"
+    },
+    "/shops/{shopId}/payments/{paymentId}": {
+      "schema": "CustomerPayment",
+      "description": "Customer khata payments received"
+    },
+    "/shops/{shopId}/suppliers/{supplierId}": {
+      "schema": "Supplier",
+      "description": "Wholesale supplier directories"
+    },
+    "/shops/{shopId}/purchaseOrders/{poId}": {
+      "schema": "PurchaseOrder",
+      "description": "Purchase orders placed with vendors"
+    },
+    "/shops/{shopId}/trash/{trashId}": {
+      "schema": "TrashItem",
+      "description": "Soft deleted records"
+    },
+    "/shops/{shopId}/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Audit security records"
+    }
+  }
+}

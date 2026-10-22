@@ -1,0 +1,6 @@
+{
+  "name": "VyaparStock - Bharat Stock & Khata",
+  "description": "Fast, simple stock, billing, customer credit (udhaar) and inventory management for any retail shop in India with offline support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

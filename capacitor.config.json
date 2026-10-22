@@ -1,0 +1,14 @@
+{
+  "appId": "in.vyaparstock.app",
+  "appName": "VyaparStock",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  }
+}
